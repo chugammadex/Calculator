@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Apheresis Cell Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1f2e47;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --danger: #f43f5e;
+    --warning: #f59e0b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 60px;
+  }
+
+  .header {
+    padding: 28px 20px 20px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(0,212,255,0.06) 0%, transparent 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.25);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .header-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+  h1 { font-size: 22px; font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; }
+  h1 span { color: var(--accent); }
+  .header-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+  .section { padding: 20px 20px 0; }
+  .section-label {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 10px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .input-card:focus-within {
+    border-color: rgba(0,212,255,0.4);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.06);
+  }
+  .input-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .input-unit {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 400;
+    background: rgba(0,212,255,0.08);
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+  .input-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4; }
+
+  input[type="number"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 20px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type="number"]:focus { border-color: var(--accent); }
+  input[type="number"]::placeholder { color: var(--text-muted); font-size: 14px; }
+
+  /* CD3 toggle */
+  .toggle-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    user-select: none;
+  }
+  .toggle-card.active {
+    border-color: rgba(245,158,11,0.4);
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.06);
+  }
+  .toggle-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .toggle-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .toggle-switch {
+    width: 44px; height: 26px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    position: relative;
+    transition: background 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle-card.active .toggle-switch { background: rgba(245,158,11,0.2); border-color: var(--warning); }
+  .toggle-card.active .toggle-switch::after { background: var(--warning); transform: translateX(18px); }
+
+  .cd3-input-wrap {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+    margin-bottom: 0;
+  }
+  .cd3-input-wrap.open { max-height: 130px; opacity: 1; margin-bottom: 10px; }
+
+  /* Buttons */
+  .calc-btn {
+    display: block;
+    width: calc(100% - 40px);
+    margin: 20px 20px 0;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--accent) 0%, #0099cc 100%);
+    border: none;
+    border-radius: 14px;
+    color: #0a0f1a;
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.15s;
+    box-shadow: 0 4px 24px rgba(0,212,255,0.25);
+  }
+  .calc-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .reset-btn {
+    display: block;
+    width: calc(100% - 40px);
+    margin: 10px 20px 0;
+    padding: 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--text-muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .reset-btn:active { border-color: var(--danger); color: var(--danger); }
+
+  /* Results */
+  .results-section {
+    padding: 20px 20px 0;
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .summary-box {
+    background: linear-gradient(135deg, rgba(0,212,255,0.06) 0%, rgba(124,58,237,0.06) 100%);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .summary-title { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+  .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13px; }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-key { color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 12px; }
+  .summary-val { font-family: 'DM Mono', monospace; font-weight: 500; }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  .result-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 3px 0 0 3px;
+  }
+  .result-card.lympho::before { background: var(--accent); }
+  .result-card.mono::before   { background: var(--accent2); }
+  .result-card.cd3::before    { background: var(--warning); }
+  .result-card.mnc::before    { background: var(--danger); }
+
+  .result-left {}
+  .result-name { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; margin-bottom: 3px; }
+  .result-label { font-size: 14px; font-weight: 700; }
+  .result-card.lympho .result-label { color: var(--accent); }
+  .result-card.mono   .result-label { color: var(--accent2); }
+  .result-card.cd3    .result-label { color: var(--warning); }
+  .result-card.mnc    .result-label { color: var(--danger); }
+
+  .result-right { text-align: right; }
+  .result-value { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 500; color: var(--text); line-height: 1; }
+  .result-unit  { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  .divider { height: 1px; background: var(--border); margin: 20px 20px 0; }
+  .error-msg {
+    background: rgba(244,63,94,0.08);
+    border: 1px solid rgba(244,63,94,0.25);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--danger);
+    margin: 10px 20px 0;
+    font-family: 'DM Mono', monospace;
+  }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="header-badge">Apheresis Tool</div>
+    <h1>백혈구<br><span>성분채집술</span> 계산기</h1>
+    <div class="header-sub">Leukapheresis · Cell Count Calculator</div>
+  </div>
+
+  <div class="section" style="margin-top:20px">
+    <div class="section-label">CBC 결과 입력</div>
+
+    <div class="input-card">
+      <div class="input-label">
+        Total WBC Count
+        <span class="input-unit">×10³/μL</span>
+      </div>
+      <div class="input-desc">총 백혈구 수 &nbsp;·&nbsp; 예: 8.5 입력 시 8,500 cells/μL</div>
+      <input type="number" id="wbc" placeholder="예: 8.5" min="0" step="0.1" inputmode="decimal">
+    </div>
+
+    <div class="input-card">
+      <div class="input-label">
+        Lymphocyte
+        <span class="input-unit">%</span>
+      </div>
+      <div class="input-desc">림프구 백분율</div>
+      <input type="number" id="lympho" placeholder="예: 30" min="0" max="100" inputmode="decimal">
+    </div>
+
+    <div class="input-card">
+      <div class="input-label">
+        Monocyte
+        <span class="input-unit">%</span>
+      </div>
+      <div class="input-desc">단핵구 백분율</div>
+      <input type="number" id="mono" placeholder="예: 8" min="0" max="100" inputmode="decimal">
+    </div>
+
+    <!-- CD3 toggle -->
+    <div class="toggle-card" id="cd3-toggle" onclick="toggleCD3()">
+      <div>
+        <div class="toggle-name">CD3+ (T cell) 포함</div>
+        <div class="toggle-desc">필요할 때만 활성화하세요</div>
+      </div>
+      <div class="toggle-switch"></div>
+    </div>
+
+    <div class="cd3-input-wrap" id="cd3-wrap">
+      <div class="input-card" style="margin-bottom:0; border-color:rgba(245,158,11,0.25)">
+        <div class="input-label">
+          CD3
+          <span class="input-unit" style="color:var(--warning);background:rgba(245,158,11,0.1)">%</span>
+        </div>
+        <div class="input-desc">T 림프구 백분율 (Lymphocyte 중)</div>
+        <input type="number" id="cd3" placeholder="예: 70" min="0" max="100" inputmode="decimal">
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section" style="margin-top:20px">
+    <div class="section-label">Product 정보</div>
+    <div class="input-card">
+      <div class="input-label">
+        Product Volume
+        <span class="input-unit">mL</span>
+      </div>
+      <div class="input-desc">채집된 최종 product 부피</div>
+      <input type="number" id="volume" placeholder="예: 200" min="0" inputmode="decimal">
+    </div>
+  </div>
+
+  <div id="error" class="error-msg hidden"></div>
+  <button class="calc-btn" onclick="calculate()">계산하기 →</button>
+  <button class="reset-btn" onclick="resetAll()">초기화</button>
+
+  <div id="results" class="results-section hidden">
+    <div class="divider" style="margin: 0 0 20px;"></div>
+    <div class="section-label" style="padding:0; margin-bottom:12px;">계산 결과</div>
+
+    <div class="summary-box">
+      <div class="summary-title">▸ 입력 요약</div>
+      <div class="summary-row">
+        <span class="summary-key">Total WBC</span>
+        <span class="summary-val" id="s-wbc">—</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-key">Lymphocyte</span>
+        <span class="summary-val" id="s-lympho">—</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-key">Monocyte</span>
+        <span class="summary-val" id="s-mono">—</span>
+      </div>
+      <div class="summary-row hidden" id="s-cd3-row">
+        <span class="summary-key">CD3</span>
+        <span class="summary-val" id="s-cd3">—</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-key">Product Vol</span>
+        <span class="summary-val" id="s-vol">—</span>
+      </div>
+    </div>
+
+    <div class="result-card" style="border-color:rgba(100,116,139,0.4)">
+      <div class="result-left">
+        <div class="result-name">TOTAL WBC</div>
+        <div class="result-label" style="color:var(--text)">총 백혈구</div>
+      </div>
+      <div class="result-right">
+        <div class="result-value" id="r-wbc">—</div>
+        <div class="result-unit">×10⁹</div>
+      </div>
+    </div>
+
+    <div class="result-card lympho">
+      <div class="result-left">
+        <div class="result-name">LYMPHOCYTE</div>
+        <div class="result-label">림프구</div>
+      </div>
+      <div class="result-right">
+        <div class="result-value" id="r-lympho">—</div>
+        <div class="result-unit">×10⁹</div>
+      </div>
+    </div>
+
+    <div class="result-card cd3 hidden" id="r-cd3-card">
+      <div class="result-left">
+        <div class="result-name">CD3+ T CELL</div>
+        <div class="result-label">T 림프구</div>
+      </div>
+      <div class="result-right">
+        <div class="result-value" id="r-cd3">—</div>
+        <div class="result-unit">×10⁹</div>
+      </div>
+    </div>
+
+    <div class="result-card mnc">
+      <div class="result-left">
+        <div class="result-name">LYMPHO + MONO</div>
+        <div class="result-label">총 단핵세포 (MNC)</div>
+      </div>
+      <div class="result-right">
+        <div class="result-value" id="r-mnc">—</div>
+        <div class="result-unit">×10⁹</div>
+      </div>
+    </div>
+
+    <div style="height:20px"></div>
+  </div>
+
+</div>
+<script>
+  let cd3Enabled = false;
+
+  function toggleCD3() {
+    cd3Enabled = !cd3Enabled;
+    document.getElementById('cd3-toggle').classList.toggle('active', cd3Enabled);
+    document.getElementById('cd3-wrap').classList.toggle('open', cd3Enabled);
+    if (!cd3Enabled) document.getElementById('cd3').value = '';
+  }
+
+  // 공식:
+  //   WBC 입력: ×10³/μL
+  //   세포 절대값(×10³/μL) = WBC × % / 100
+  //   총 세포(×10⁹) = 세포(×10³/μL) × Volume(mL) × 1000μL/mL ÷ 10⁹
+  //                 = 세포(×10³/μL) × Volume(mL) / 1000
+  //   → 소수 둘째자리 반올림 (Math.round( × 100) / 100)
+  function toGiga(cellsPer10e3, volML) {
+    return Math.round(cellsPer10e3 * volML / 1000 * 100) / 100;
+  }
+
+  function calculate() {
+    const wbc    = parseFloat(document.getElementById('wbc').value);
+    const lympho = parseFloat(document.getElementById('lympho').value);
+    const mono   = parseFloat(document.getElementById('mono').value);
+    const vol    = parseFloat(document.getElementById('volume').value);
+    const errEl  = document.getElementById('error');
+
+    if (isNaN(wbc) || isNaN(lympho) || isNaN(mono) || isNaN(vol)) {
+      errEl.textContent = '⚠ WBC, Lymphocyte, Monocyte, Volume 값을 모두 입력해 주세요.';
+      errEl.classList.remove('hidden');
+      document.getElementById('results').classList.add('hidden');
+      return;
+    }
+    if (lympho + mono > 100) {
+      errEl.textContent = '⚠ Lymphocyte + Monocyte % 합이 100%를 초과합니다.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+
+    let cd3Val = null;
+    if (cd3Enabled) {
+      cd3Val = parseFloat(document.getElementById('cd3').value);
+      if (isNaN(cd3Val)) {
+        errEl.textContent = '⚠ CD3 % 값을 입력해 주세요.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (cd3Val > 100) {
+        errEl.textContent = '⚠ CD3 % 값이 100%를 초과합니다.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+    }
+    errEl.classList.add('hidden');
+
+    const lymphoAbs = wbc * lympho / 100;
+    const monoAbs   = wbc * mono / 100;
+    const mncAbs    = lymphoAbs + monoAbs;
+
+    document.getElementById('s-wbc').textContent    = wbc + ' ×10³/μL';
+    document.getElementById('s-lympho').textContent = lympho + ' %';
+    document.getElementById('s-mono').textContent   = mono + ' %';
+    document.getElementById('s-vol').textContent    = vol + ' mL';
+
+    const cd3Row = document.getElementById('s-cd3-row');
+    const cd3Card = document.getElementById('r-cd3-card');
+
+    if (cd3Enabled) {
+      cd3Row.classList.remove('hidden');
+      document.getElementById('s-cd3').textContent = cd3Val + ' %';
+      const cd3Abs = lymphoAbs * cd3Val / 100;
+      document.getElementById('r-cd3').textContent = toGiga(cd3Abs, vol).toFixed(2);
+      cd3Card.classList.remove('hidden');
+    } else {
+      cd3Row.classList.add('hidden');
+      cd3Card.classList.add('hidden');
+    }
+
+    document.getElementById('r-wbc').textContent    = toGiga(wbc, vol).toFixed(2);
+    document.getElementById('r-lympho').textContent = toGiga(lymphoAbs, vol).toFixed(2);
+    document.getElementById('r-mnc').textContent    = toGiga(mncAbs, vol).toFixed(2);
+
+    document.getElementById('results').classList.remove('hidden');
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function resetAll() {
+    ['wbc','lympho','mono','cd3','volume'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    if (cd3Enabled) toggleCD3();
+    document.getElementById('results').classList.add('hidden');
+    document.getElementById('error').classList.add('hidden');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
